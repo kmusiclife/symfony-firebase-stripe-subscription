@@ -1,0 +1,21 @@
+{% extends 'base.html.twig' %}
+
+{% block title %}{% endblock %}
+
+{% block body %}
+<form action="{{ url('subscription_do') }}" method="post">
+  <input type="hidden" name="plan_id" value="{{ plan.id }}" />
+  <input type="hidden" name="product_id" value="{{ product.id }}" />
+  <div class="col-12 col-md-6 mx-auto">
+    {% if product.images|length > 0 %}
+        <div><img src="{{ product.images[0] }}" class="w-100 card-img-top" /></div>
+    {% endif %}
+    <div>{{ plan.active }}</div>
+    <div>{{ plan.amount }}</div>
+    <div>{{ plan.currency }}</div>
+    <div>{{ plan.interval }}</div>
+    <div>{{ product.name }}</div>
+    <input type="submit" class="btn btn-primary btn-block" value="定期購読" />
+  </div>
+</form>
+{% endblock %}

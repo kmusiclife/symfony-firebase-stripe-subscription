@@ -1,0 +1,26 @@
+security:
+    providers:
+      firebase_provider:
+          entity:
+            class: App\Entity\User
+            property: firebaseUid
+
+    firewalls:
+        main:
+            lazy: true
+            provider: firebase_provider
+            logout: 
+                path: /signout
+            remember_me:
+                secret: '%env(APP_SECRET)%'
+                lifetime: 604800
+                path: /
+            form_login:
+                login_path: signin
+                check_path: signin
+                remember_me: true
+            
+    access_control:
+        - { path: ^/user/*, roles: ROLE_USER }
+        - { path: ^/subscription/*, roles: ROLE_CARD }
+        

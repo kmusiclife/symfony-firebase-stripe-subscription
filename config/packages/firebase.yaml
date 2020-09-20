@@ -1,0 +1,6 @@
+kreait_firebase:
+  projects:
+    my_project:
+      # Remove/Override the following line if running on GCE
+      credentials: '%kernel.project_dir%/%env(FIREBASE_CREDENTIALS)%'
+      verifier_cache: cache.app

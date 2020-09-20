@@ -1,0 +1,46 @@
+{% extends 'base.html.twig' %}
+
+{% block title %}{% endblock %}
+
+{% block body %}
+{% if subscription_data %}
+<div class="row mb-3">
+    <div class="col-12 col-md-3">
+        <h5 class="text-primary">契約プラン</h5>
+    </div>
+    <div class="col-12 col-md-9 p-3 bg-light rounded">
+        <table class="table">
+            <tr>
+                <td colspan="2">
+                    {% if product_data.images|length > 0 %}
+                        <img src="{{ product_data.images[0] }}" class="w-100" />
+                    {% endif %}        
+                </td>
+            </tr>
+            <tr>
+                <td style="width: 30%;">契約詳細</td>
+                <td>
+                    更新日: {{ subscription_data.current_period_end|date('Y-m-d H:i') }}<br />
+                    契約日: {{ subscription_data.current_period_start|date('Y-m-d H:i') }}<br />
+                    初回請求日: {{ subscription_data.billing_cycle_anchor|date('Y-m-d H:i') }}<br />
+                </td>
+            </tr>
+            <tr>
+                <td style="width: 30%;">金額</td>
+                <td>{{ plan_data.amount }}</td>
+            </tr>
+            <tr>
+                <td>プラン名</td>
+                <td>{{ product_data.name }}</td>
+            </tr>
+        </table>
+    </div>
+</div>
+
+{% else %}
+
+{% endif %}
+<a class="btn btn-primary btn-block" href="{{ url('subscription') }}">プラン一覧</a>
+<a class="btn btn-primary btn-block" href="{{ url('user_card') }}">ユーザ情報・カード情報更新</a>
+
+{% endblock %}

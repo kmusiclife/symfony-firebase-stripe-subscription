@@ -1,0 +1,66 @@
+<!doctype html>
+<html lang="{{ app.request.locale }}">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
+<title>{% block title %}Welcome!{% endblock %}</title>
+{% block stylesheets %}{% endblock %}
+<script src="https://www.gstatic.com/firebasejs/ui/3.5.2/firebase-ui-auth__{{ app.request.locale }}.js"></script>
+<script src="https://www.gstatic.com/firebasejs/6.2.0/firebase-app.js"></script>
+<script src="https://www.gstatic.com/firebasejs/6.2.0/firebase-auth.js"></script>
+<script src="https://www.gstatic.com/firebasejs/6.2.0/firebase-firestore.js"></script>
+<script src="/js/firebase-config.js"></script>
+<link type="text/css" rel="stylesheet" href="https://cdn.firebase.com/libs/firebaseui/3.5.2/firebaseui.css" />
+<link type="text/css" rel="stylesheet" href="/css/main.css" />
+</head>
+<body>
+
+<header>
+  <nav class="navbar navbar-expand-md navbar-dark fixed-top bg-dark">
+    <div class="container-fluid">
+      <a class="navbar-brand" href="/">Subscription Set</a>
+      <button class="navbar-toggler" type="button" data-toggle="collapse" data-target="#navbarCollapse" aria-controls="navbarCollapse" aria-expanded="false" aria-label="Toggle navigation">
+        <span class="navbar-toggler-icon"></span>
+      </button>
+      <div class="collapse navbar-collapse" id="navbarCollapse">
+        <ul class="navbar-nav mr-auto mb-2 mb-md-0">
+          <li class="nav-item">
+            <a class="nav-link" aria-current="page" href="/">Home</a>
+          </li>
+          {% if app.user %}
+          <li class="nav-item">
+            <a class="nav-link" href="/user">Profile</a>
+          </li>
+          <li class="nav-item">
+            <a class="nav-link" href="/signout">Sign out</a>
+          </li>
+          {% else %}
+          <li class="nav-item">
+            <a class="nav-link" href="/signin">Sign in</a>
+          </li>
+          {% endif %}
+        </ul>
+      </div>
+    </div>
+  </nav>
+</header>
+
+<div class="container" style="margin-top: 80px;">
+{% for message in app.flashes('error') %}
+    <div class="alert alert-danger my-4">
+        {{ message }}
+    </div>
+{% endfor %}
+{% for message in app.flashes('success') %}
+    <div class="alert alert-success my-4">
+        {{ message }}
+    </div>
+{% endfor %}
+{% block body %}
+{% endblock %}
+</div>
+<script src="/js/bootstrap.min.js"></script>
+{% block javascripts %}
+{% endblock %}
+</body>
+</html>

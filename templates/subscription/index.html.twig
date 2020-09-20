@@ -1,0 +1,34 @@
+{% extends 'base.html.twig' %}
+
+{% block title %}{% endblock %}
+
+{% block body %}
+<div class="row">
+{% for subscription_list in subscription_lists %}
+<div class="col-3">
+  <div class="card">
+    <div class="card-body">
+      <h5 class="card-title">{{ subscription_list.product.name }}</h5>
+      <p class="card-text">{{ subscription_list.plan.amount }}</p>
+      {% if subscription_list.product.images|length > 0 %}
+          <img src="{{ subscription_list.product.images[0] }}" class="w-100 card-img-top" />
+      {% endif %}
+      {{ subscription_list.product.id }}
+      {{ subscription_list.plan.id }}
+      {% if app.user.data.plan_id|default == subscription_list.plan.id|default and app.user.data.product_id|default == subscription_list.product.id|default %}
+        <form action="{{ url('subscription_confirm') }}" method="post">
+            <input type="button" class="btn btn-primary btn-block" value="現在契約中" disabled />
+        </form>
+      {% else  %}
+        <form action="{{ url('subscription_confirm') }}" method="post">
+            <input type="hidden" name="plan_id" value="{{ subscription_list.plan.id }}" />
+            <input type="hidden" name="product_id" value="{{ subscription_list.product.id }}" />
+            <input type="submit" class="btn btn-primary btn-block" value="購読する" />
+        </form>
+      {% endif %}
+    </div>
+  </div>
+</div>
+{% endfor %}
+</div>
+{% endblock %}

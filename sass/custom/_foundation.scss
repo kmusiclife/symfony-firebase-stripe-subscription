@@ -1,0 +1,80 @@
+.text-gray-100{
+  color: $gray-100;
+}
+.text-gray-200{
+  color: $gray-200;
+}
+.text-gray-300{
+  color: $gray-300;
+}
+.text-gray-400{
+  color: $gray-400;
+}
+.text-gray-500{
+  color: $gray-500;
+}
+.text-gray-600{
+  color: $gray-600;
+}
+.bg-gray-100
+{
+  background-color: $gray-100;
+}
+.bg-gray-200
+{
+  background-color: $gray-200;
+}
+.bg-gray-300
+{
+  background-color: $gray-300;
+}
+.bg-gray-400
+{
+  background-color: $gray-400;
+}
+.bg-gray-500
+{
+  background-color: $gray-500;
+}
+.bg-gray-600
+{
+  background-color: $gray-600;
+}
+.mw-sm{
+  max-width: map-get($grid-breakpoints, 'sm');
+}
+.mw-md{
+  max-width: map-get($grid-breakpoints, 'md');
+}
+.mw-lg{
+  max-width: map-get($grid-breakpoints, 'lg');
+}
+.mw-xl{
+  max-width: map-get($grid-breakpoints, 'xl');
+}
+
+.display-1 {
+  font-size: 1.8rem;
+  line-height: 2.5rem;
+  font-weight: 600;
+}
+.display-2 {
+  font-size: 1.5rem;
+  line-height: 2.0rem;
+  font-weight: 600;
+}
+.display-3 {
+  font-size: 1.2rem;
+  line-height: 2.0rem;
+  font-weight: 600;
+}
+.display-4 {
+  font-size: 1.1rem;
+  line-height: 1.8rem;
+  font-size: 1.0rem;
+}
+.display-5 {
+  font-size: 1.0rem;
+  line-height: 1.7rem;
+  font-size: 0.8rem;
+}

@@ -1,0 +1,15 @@
+{% extends 'base.html.twig' %}
+
+{% block title %}{% endblock %}
+
+{% block body %}
+<script>
+
+    if (!firebase.apps.length) {
+        firebase.initializeApp(firebaseConfig);
+    }    // Your web app's Firebase configuration
+    firebase.auth().signOut();
+    location.href = '/';
+    
+</script>
+{% endblock %}
