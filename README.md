@@ -1,0 +1,1 @@
+# symfony-firebase-stripe-subscription
