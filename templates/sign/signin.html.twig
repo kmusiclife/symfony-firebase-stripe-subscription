@@ -17,7 +17,7 @@
                 authResult.user.getIdToken().then(function(idToken){ 
                     return idToken;
                 }).then(idToken => {
-                    fetch("{{ url('verify') }}", { 'headers': { idToken: idToken } })
+                    fetch("{{ url('verify') }}", { 'headers': { idToken: idToken, csrf: "{{ csrf_token( csrf_id ) }}" } })
                         .then( response => { 
                             if( response.status == 200 ) {
                                 return response.json();

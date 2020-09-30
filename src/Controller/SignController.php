@@ -155,7 +155,10 @@ class SignController extends AbstractController
      */
     public function signin()
     {
-        return $this->render('sign/signin.html.twig', []);
+        $csrf_id = sha1( uniqid() );
+        $csrf = $this->get('security.csrf.token_manager')->getToken($csrf_id);
+        $this->session->set('csrf', $csrf);
+        return $this->render('sign/signin.html.twig', ['csrf_id' => $csrf_id]);
     }
     /**
      * @Route("/signout", name="signout")
