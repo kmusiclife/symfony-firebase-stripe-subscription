@@ -84,7 +84,7 @@ class SignController extends AbstractController
         $customer = isset($fire_data['customer']) ? $fire_data['customer'] : null;
         $subscription = isset($fire_data['subscription']) ? $fire_data['subscription'] : null;
 
-        $roles = array('ROLE_USER');
+        $roles = $db_user->getRoles();
         if($customer) array_push($roles, 'ROLE_CARD');
         if($subscription) array_push($roles, 'ROLE_SUBSCRIPTION');
 

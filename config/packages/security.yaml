@@ -23,4 +23,5 @@ security:
     access_control:
         - { path: ^/user/*, roles: ROLE_USER }
         - { path: ^/subscription/*, roles: ROLE_CARD }
+        - { path: ^/admin/*, roles: ROLE_ADMIN }
         
