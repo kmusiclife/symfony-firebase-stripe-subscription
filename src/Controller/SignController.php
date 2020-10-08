@@ -82,58 +82,18 @@ class SignController extends AbstractController
 
         // start: Create roles
         $customer = isset($fire_data['customer']) ? $fire_data['customer'] : null;
-        $subscription = isset($fire_data['subscription']) ? $fire_data['subscription'] : null;
+        $subscriptions = isset($fire_data['subscriptions']) ? $fire_data['subscriptions'] : array();
 
-        $roles = $db_user->getRoles();
+        $roles = array();
         if($customer) array_push($roles, 'ROLE_CARD');
-        if($subscription) array_push($roles, 'ROLE_SUBSCRIPTION');
-
-        // get subscription_data from stripe
-        $error_message = null;
-        try{
-            
-            if($subscription){
-                $subscription_data = $stripe->subscriptions->retrieve($subscription);
-                $cancel_at_period_end = $subscription_data->cancel_at_period_end;
-                $current_period_end = $subscription_data->current_period_end;
-                $canceled_at = $subscription_data->canceled_at;
-                // subscription role
-                $price_role = isset($subscription_data->items->data[0]->price->metadata->ROLE) ? 
-                    $subscription_data->items->data[0]->price->metadata->ROLE : null;
-
-            } else {
-                $subscription_data = null;
-                $cancel_at_period_end = null;
-                $current_period_end = null;
-                $canceled_at = null;
-                $price_role = null;
-            }
-            if($price_role) array_push($roles, $price_role);
-
-        } catch(\Stripe\Exception\CardException $e) {
-            $error_message = $e->getMessage();
-        } catch (\Stripe\Exception\RateLimitException $e) {
-            $error_message = $e->getMessage();
-        } catch (\Stripe\Exception\InvalidRequestException $e) {
-            $error_message = $e->getMessage();
-        } catch (\Stripe\Exception\AuthenticationException $e) {
-            $error_message = $e->getMessage();
-        } catch (\Stripe\Exception\ApiConnectionException $e) {
-            $error_message = $e->getMessage();
-        } catch (\Stripe\Exception\ApiErrorException $e) {
-            $error_message = $e->getMessage();
-        } catch(\Exception $e){
-            $error_message = $e->getMessage();
-        } finally {
-            if($error_message){
-                $json = json_encode(array('message' => $error_message, 'redirect' => null));
-                $res = new Response($json);
-                $res->setStatusCode(500);
-                $res->headers->set('Content-Type','application/json');
-                return $res;
-            }
+        if($subscriptions) array_push($roles, 'ROLE_SUBSCRIPTION');
+        foreach($subscriptions as $subscription)
+        {
+            $subscription_data = $stripe->subscriptions->retrieve($subscription);
+            $role = $subscription_data->items->data[0]->price->metadata->ROLE;
+            if($role) array_push($roles, $role);
         }
-
+        $roles = array_unique($roles);
         $db_user->setRoles($roles);
         $em->persist($db_user);
         $em->flush();

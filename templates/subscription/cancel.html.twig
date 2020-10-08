@@ -37,6 +37,7 @@
 </div>
 
 <form action="{{ url('subscription_cancel_do') }}" method="post">
-    <input type="submit" class="btn btn-primary btn-block" value="キャンセルする">
+    <input type="hidden" name="subscription_id" value="{{ subscription_data.id }}" />
+    <input type="submit" class="btn btn-danger btn-block btn-lx" value="キャンセルする">
 </form>
 {% endblock %}

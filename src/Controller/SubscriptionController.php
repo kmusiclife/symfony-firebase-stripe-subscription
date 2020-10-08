@@ -28,44 +28,31 @@ class SubscriptionController extends AbstractController
      */
     public function index(Request $request)
     {
+        
+        $user = $this->getUser();
+        $customer = $user->getData()->customer;
 
         $stripe = new \Stripe\StripeClient(
             $this->getParameter('stripe_sk_key')
         );
+        $subscription_lists = [];
 
-        $redirect = 'index';
-        try {
-            $plans = $stripe->plans->all(['limit' => 10]);
-            $subscription_lists = array();
-        } catch(\Stripe\Exception\CardException $e) {
-            $this->addFlash('error', $e->getMessage());
-            return $this->redirectToRoute($redirect);
-        } catch (\Stripe\Exception\RateLimitException $e) {
-            $this->addFlash('error', $e->getMessage());
-            return $this->redirectToRoute($redirect);
-        } catch (\Stripe\Exception\InvalidRequestException $e) {
-            $this->addFlash('error', $e->getMessage());
-            return $this->redirectToRoute($redirect);
-        } catch (\Stripe\Exception\AuthenticationException $e) {
-            $this->addFlash('error', $e->getMessage());
-            return $this->redirectToRoute($redirect);
-        } catch (\Stripe\Exception\ApiConnectionException $e) {
-            $this->addFlash('error', $e->getMessage());
-            return $this->redirectToRoute($redirect);
-        } catch (\Stripe\Exception\ApiErrorException $e) {
-            $this->addFlash('error', $e->getMessage());
-            return $this->redirectToRoute($redirect);
-        } catch(Exception $e){
-            $this->addFlash('error', $e->getMessage());
-            return $this->redirectToRoute($redirect);
-        }
+        $_prices = $stripe->prices->all();
+        $_subscriptions = $stripe->subscriptions->all(['customer' => $customer ]);
 
-        foreach($plans as $plan)
-        {
-            $product = $stripe->products->retrieve($plan->product);
+        foreach($_prices as $_price){
+
+            $subscription_id = false;
+            $_product = $stripe->products->retrieve( $_price->product );
+            foreach($_subscriptions as $_subscription){
+                if($_subscription->items->data[0]->price->id == $_price->id ) {
+                    $subscription_id = $_subscription->id;
+                }
+            }
             array_push($subscription_lists, array(
-                'plan' => $plan,
-                'product' => $product
+                'plan' => $_price,
+                'product' => $_product,
+                'subscription_id' => $subscription_id
             ));
         }
         return $this->render('subscription/index.html.twig', [
@@ -79,98 +66,72 @@ class SubscriptionController extends AbstractController
     public function do(Request $request)
     {
 
-        $em = $this->getDoctrine()->getManager();
         $user = $this->getUser();
+        $em = $this->getDoctrine()->getManager();
 
-        $stripe = new \Stripe\StripeClient(
-            $this->getParameter('stripe_sk_key')
-        );
-        $product_id = $request->get('product_id');
-        $plan_id = $request->get('plan_id');
-        $customer = $this->getUser()->getData()->customer;
-        $subscription = isset($this->getUser()->getData()->subscription) ? $this->getUser()->getData()->subscription : null;
-
-        $redirect = 'subscription';
         try {
-            
-            $plan = $stripe->plans->retrieve($plan_id);
-            $role = isset($plan->metadata->ROLE) ? $plan->metadata->ROLE : null;
 
-            if($subscription){
-                
-                // https://stripe.com/docs/billing/subscriptions/upgrade-downgrade
-                $subscription_data = $stripe->subscriptions->retrieve($subscription);
-                $subscription = $stripe->subscriptions->update(
-                    $subscription,
-                    array(
-                        'cancel_at_period_end' => false,
-                        'proration_behavior' => 'create_prorations',
-                        'proration_date' => time(),
-                        'items' => array(
-                            array(
-                                'id' => $subscription_data->items->data[0]->id,
-                                'price' => $plan_id
-                            )
-                        )
-                    )
-                );
+            $stripe = new \Stripe\StripeClient(
+                $this->getParameter('stripe_sk_key')
+            );
+            $product_id = $request->get('product_id');
+            $plan_id = $request->get('plan_id');
+            $customer = $user->getData()->customer;
 
-            } else {
-
-                $subscription = $stripe->subscriptions->create([
-                    'customer' => $customer,
-                    'items' => [
-                        ['price' => $plan_id],
-                    ],
-                ]);
+            $_subscriptions = $stripe->subscriptions->all([
+                'status' => 'active',
+                'customer' => $customer,
+                'limit' => 100
+            ]);
+            foreach($_subscriptions as $_subscription){
+                if( $_subscription->items->data[0]->plan->id == $plan_id ){
+                    $this->addFlash('error', 'すでに契約しているプランです');
+                    return $this->redirectToRoute('subscription');
+                }
             }
 
-            // Firebase user update
-            $database = $this->firestore->database();
-            $docRef = $database->collection('users')->document( $user->getFirebaseUid() );
-            $user_data = $docRef->snapshot()->data();
-            
-            $user_data['product_id'] = $product_id;
-            $user_data['plan_id'] = $plan_id;
-            $user_data['subscription'] = $subscription->id;
-            $docRef->set($user_data);
+            $plan = $stripe->plans->retrieve($plan_id);
+            $subscription = $stripe->subscriptions->create([
+                'customer' => $customer,
+                'items' => [
+                    ['price' => $plan_id],
+                ],
+            ]);
 
-            // create ROLE
-            $roles = array('ROLE_SUBSCRIPTION', 'ROLE_USER');
-            if($role) array_push($roles, $role);
-
-            // local db update for user
-            $user->setRoles($roles);
-            $user->setData( json_encode($user_data) );
-            $em->persist($user);
-            $em->flush();
-
-            // re-Login 
-            $token = new UsernamePasswordToken($user, null, 'main', $user->getRoles());
-            $this->get('security.token_storage')->setToken($token);
-            
-        } catch(\Stripe\Exception\CardException $e) {
-            $this->addFlash('error', $e->getMessage());
-            return $this->redirectToRoute($redirect);
-        } catch (\Stripe\Exception\RateLimitException $e) {
-            $this->addFlash('error', $e->getMessage());
-            return $this->redirectToRoute($redirect);
-        } catch (\Stripe\Exception\InvalidRequestException $e) {
-            $this->addFlash('error', $e->getMessage());
-            return $this->redirectToRoute($redirect);
-        } catch (\Stripe\Exception\AuthenticationException $e) {
-            $this->addFlash('error', $e->getMessage());
-            return $this->redirectToRoute($redirect);
-        } catch (\Stripe\Exception\ApiConnectionException $e) {
-            $this->addFlash('error', $e->getMessage());
-            return $this->redirectToRoute($redirect);
-        } catch (\Stripe\Exception\ApiErrorException $e) {
-            $this->addFlash('error', $e->getMessage());
-            return $this->redirectToRoute($redirect);
         } catch(Exception $e){
             $this->addFlash('error', $e->getMessage());
-            return $this->redirectToRoute($redirect);
+            return $this->redirectToRoute('subscription');
         }
+
+        // Firebase user update
+        $database = $this->firestore->database();
+        $docRef = $database->collection('users')->document( $user->getFirebaseUid() );
+        $user_data = $docRef->snapshot()->data(); // array
+        
+        if(isset($user_data['subscriptions'])){
+            $user_subscriptions = is_array($user_data['subscriptions']) ? $user_data['subscriptions'] : array();
+        } else $user_subscriptions = array();
+
+        array_push($user_subscriptions, $subscription->id);
+        $user_data['subscriptions'] = $user_subscriptions;
+        $docRef->set($user_data);
+
+        // ROLEs
+        $role = isset($plan->metadata->ROLE) ? $plan->metadata->ROLE : null; // new role
+        $roles = $user->getRoles();
+        array_push($roles, $role);
+        array_push($roles, 'ROLE_SUBSCRIPTION');
+        $roles = array_unique($roles);
+
+        $user->setRoles($roles);
+        $user->setData( json_encode($user_data) );
+        $em->persist($user);
+        $em->flush();
+
+        // re-Login 
+        $token = new UsernamePasswordToken($user, null, 'main', $user->getRoles());
+        $this->get('security.token_storage')->setToken($token);
+
         $this->addFlash('success', '定期購入契約しました');
         return $this->redirectToRoute('subscription');
 
@@ -180,70 +141,88 @@ class SubscriptionController extends AbstractController
      */
     public function confirm(Request $request)
     {
-        // https://stripe.com/docs/billing/subscriptions/prorations
-        $stripe = new \Stripe\StripeClient(
-            $this->getParameter('stripe_sk_key')
-        );
 
-        $redirect = 'subscription';
+        $user = $this->getUser();
+
         try {
+
+            $stripe = new \Stripe\StripeClient(
+                $this->getParameter('stripe_sk_key')
+            );
+
             $product_id = $request->get('product_id');
-            $plan_id = $request->get('plan_id');
-
             $product = $stripe->products->retrieve($product_id);
+            $plan_id = $request->get('plan_id');
             $plan = $stripe->plans->retrieve($plan_id);
+            $customer = $user->getData()->customer;
 
-            // preview
-            $subscription = isset($this->getUser()->getData()->subscription) ? $this->getUser()->getData()->subscription : null;
-            if($subscription){
-                $subscription_data = $stripe->subscriptions->retrieve($subscription);
-            } else {
-                $subscription_data = null;
-            }
-            if($subscription_data){
-                $items = [
-                    [
-                        'id' => $subscription_data->items->data[0]->id,
-                        'price' => $plan_id,
-                    ],
-                ];
-                $invoice = $stripe->invoices->upcoming([
-                    'customer' => $this->getUser()->getData()->customer,
-                    'subscription' => $subscription,
-                    'subscription_items' => $items,
-                    'subscription_proration_date' => time(),
-                ]);
-            } else {
-                $invoice = null;
-            }
+            $_subscriptions = $stripe->subscriptions->all([
+                'status' => 'active',
+                'customer' => $customer,
+                'limit' => 100
+            ]); 
 
-        } catch(\Stripe\Exception\CardException $e) {
-            $this->addFlash('error', $e->getMessage());
-            return $this->redirectToRoute($redirect);
-        } catch (\Stripe\Exception\RateLimitException $e) {
-            $this->addFlash('error', $e->getMessage());
-            return $this->redirectToRoute($redirect);
-        } catch (\Stripe\Exception\InvalidRequestException $e) {
-            $this->addFlash('error', $e->getMessage());
-            return $this->redirectToRoute($redirect);
-        } catch (\Stripe\Exception\AuthenticationException $e) {
-            $this->addFlash('error', $e->getMessage());
-            return $this->redirectToRoute($redirect);
-        } catch (\Stripe\Exception\ApiConnectionException $e) {
-            $this->addFlash('error', $e->getMessage());
-            return $this->redirectToRoute($redirect);
-        } catch (\Stripe\Exception\ApiErrorException $e) {
-            $this->addFlash('error', $e->getMessage());
-            return $this->redirectToRoute($redirect);
         } catch(Exception $e){
             $this->addFlash('error', $e->getMessage());
-            return $this->redirectToRoute($redirect);
+            return $this->redirectToRoute('subscription');
         }
-
+        foreach($_subscriptions as $_subscription){
+            if( $_subscription->items->data[0]->plan->id == $plan_id ){
+                $this->addFlash('error', 'すでに契約しているプランです');
+                return $this->redirectToRoute('subscription');
+            }
+        }
         return $this->render('subscription/confirm.html.twig', [
             'product' => $product,
-            'plan' => $plan,
-            'invoice' => $invoice
+            'plan' => $plan
+        ]);
+    }
+    /**
+     * @Route("/cancel", name="subscription_cancel", methods={"post"})
+     */
+    public function cancel(Request $request)
+    {
+        
+        $user = $this->getUser();
+        $customer = $user->getData()->customer;
+
+        try{
+            
+            $stripe = new \Stripe\StripeClient(
+                $this->getParameter('stripe_sk_key')
+            );
+            $subscription_id = $request->get('subscription_id');
+            $subscription_data = $stripe->subscriptions->retrieve($subscription_id);
+
+        } catch(Exception $e){
+            $this->addFlash('error', $e->getMessage());
+            return $this->redirectToRoute('subscription');
+        }
+        if(!$subscription_data){
+            $this->addFlash('danger', 'すでにキャンセルされています');
+            return $this->redirectToRoute('subscription');
+        }
+
+        $subscription_ids = is_array($user->getData()->subscriptions) ?
+            $user->getData()->subscriptions : array();
+        
+        if( !in_array($subscription_id, $subscription_ids) ){
+            $this->addFlash('danger', '購読がありません。再度ログインしたあとにもう一度試してください。');
+            return $this->redirectToRoute('subscription');
+        }
+
+        if( $subscription_data ){
+            $plan_data = $subscription_data->items->data[0]->plan;
+            $product_data = $stripe->products->retrieve($plan_data->product);
+        } else {
+            $plan_data = null;
+            $product_data = null;
+        }
+        
+        return $this->render('subscription/cancel.html.twig', [
+            'subscription_data' => $subscription_data,
+            'product_data' => $product_data,
+            'plan_data' => $plan_data
         ]);
     }
     /**
@@ -251,17 +230,19 @@ class SubscriptionController extends AbstractController
      */
     public function cancelDo(Request $request)
     {
-        $stripe = new \Stripe\StripeClient(
-            $this->getParameter('stripe_sk_key')
-        );
+
+        $user = $this->getUser();
+        $em = $this->getDoctrine()->getManager();
 
         $redirect = 'subscription';
         try {
-
-            $subscription = $this->getUser()->getData()->subscription;
-            $stripe->subscriptions->cancel(
-                $subscription, []
+            $stripe = new \Stripe\StripeClient(
+                $this->getParameter('stripe_sk_key')
             );
+            $subscription_id = $request->get('subscription_id');
+            $subscription_data = $stripe->subscriptions->retrieve($subscription_id);
+            $role = $subscription_data->items->data[0]->plan->metadata->ROLE;
+            $stripe->subscriptions->cancel( $subscription_data->id, [] );
 
         } catch(\Stripe\Exception\CardException $e) {
             $this->addFlash('error', $e->getMessage());
@@ -288,56 +269,39 @@ class SubscriptionController extends AbstractController
 
         // Firebase user update
         $database = $this->firestore->database();
-        $docRef = $database->collection('users')->document( $this->getUser()->getFirebaseUid() );
+        $docRef = $database->collection('users')->document( $user->getFirebaseUid() );
         $user_data = $docRef->snapshot()->data();
-        
-        $user_data['product_id'] = '';
-        $user_data['plan_id'] = '';
-        $user_data['subscription'] = '';
+
+        $subscription_ids = [];
+        $_subscription_ids = $user_data['subscriptions'];
+        foreach($_subscription_ids as $_s_id){
+            if($subscription_id != $_s_id){
+                array_push($subscription_ids, $_s_id);
+            }
+        }
+        $user_data['subscriptions'] = $subscription_ids;
         $docRef->set($user_data);
 
-        // local db update for user
-        $this->getUser()->setRoles(array('ROLE_USER'));
-        $this->getUser()->setData( json_encode($user_data) );
-        
-        $em = $this->getDoctrine()->getManager();
-        $em->persist($this->getUser());
+        // ROLEs
+        $roles = $user->getRoles();
+        $_roles = [];
+        foreach($roles as $r){
+            if($r != $role) array_push($_roles, $r);
+        }
+        $roles = array_unique($_roles);
+
+        $user->setRoles($roles);
+        $user->setData( json_encode($user_data) );
+        $em->persist($user);
         $em->flush();
 
         // re-Login 
-        $token = new UsernamePasswordToken($this->getUser(), null, 'main', $this->getUser()->getRoles());
+        $token = new UsernamePasswordToken($user, null, 'main', $user->getRoles());
         $this->get('security.token_storage')->setToken($token);
         
-        $this->addFlash('success', 'Your changes were saved!');
+        $this->addFlash('success', '契約をキャンセルしました');
         return $this->redirectToRoute('subscription');
-    }
-    /**
-     * @Route("/cancel", name="subscription_cancel", methods={"get"})
-     */
-    public function cancel()
-    {
-        $stripe = new \Stripe\StripeClient(
-            $this->getParameter('stripe_sk_key')
-        );
 
-        $subscription_id = isset($this->getUser()->getData()->subscription) ?
-            $this->getUser()->getData()->subscription : null;
-
-        if( $subscription_id ){
-            $subscription_data = $stripe->subscriptions->retrieve($subscription_id);
-            $plan_data = $subscription_data->items->data[0]->plan;
-            $product_data = $stripe->products->retrieve($plan_data->product);
-        } else {
-            $subscription_data = null;
-            $plan_data = null;
-            $product_data = null;
-        }
-        
-        return $this->render('subscription/cancel.html.twig', [
-            'subscription_data' => $subscription_data,
-            'product_data' => $product_data,
-            'plan_data' => $plan_data
-        ]);
     }
 
 }

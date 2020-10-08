@@ -9,15 +9,16 @@
   <div class="card">
     <div class="card-body">
       <h5 class="card-title">{{ subscription_list.product.name }}</h5>
-      <p class="card-text">{{ subscription_list.plan.amount }}</p>
+      <p class="card-text">{{ subscription_list.plan.unit_amount }}</p>
       {% if subscription_list.product.images|length > 0 %}
           <img src="{{ subscription_list.product.images[0] }}" class="w-100 card-img-top" />
       {% endif %}
       {{ subscription_list.product.id }}
       {{ subscription_list.plan.id }}
-      {% if app.user.data.plan_id|default == subscription_list.plan.id|default and app.user.data.product_id|default == subscription_list.product.id|default %}
-        <form action="{{ url('subscription_confirm') }}" method="post">
-            <input type="button" class="btn btn-primary btn-block" value="現在契約中" disabled />
+      {% if subscription_list.subscription_id %}
+        <form action="{{ url('subscription_cancel') }}" method="post">
+            <input type="hidden" name="subscription_id" value="{{ subscription_list.subscription_id }}" />
+            <input type="submit" class="btn btn-danger btn-block" value="キャンセルする" />
         </form>
       {% else  %}
         <form action="{{ url('subscription_confirm') }}" method="post">
