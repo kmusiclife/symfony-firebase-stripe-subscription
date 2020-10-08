@@ -1,5 +1,5 @@
 {
-    "name": "gamez/firebase-examples",
+    "name": "kmusiclife/symfony-firebase-stripe-subscription",
     "license": "MIT",
     "description": "Symfony 5 example application integrating https://github.com/kreait/firebase-php",
     "require": {
